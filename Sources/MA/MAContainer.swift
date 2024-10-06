@@ -64,6 +64,17 @@ public final class MAContainer<T: AnyObject> {
         return true
     }
 
+    public func release(_ ids: [Int]) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        for id in ids {
+            guard items[id] != nil else { continue }
+            items[id] = nil
+            next.append(id)
+        }
+    }
+
     public func find(by id: Int) -> T? {
         lock.lock()
         defer { lock.unlock() }
@@ -109,7 +120,9 @@ public final class MAContainer<T: AnyObject> {
         if let size {
             items = Array(repeating: nil, count: max(4, size))
         } else {
-            items.removeAll()
+            for i in items.indices {
+                items[i] = nil
+            }
         }
         next = Array(items.indices.reversed())
     }
@@ -122,4 +135,6 @@ public final class MAContainer<T: AnyObject> {
 
         return withUnsafeMutablePointer(to: &items[id]!) { $0 }
     }
+
+    public var size: Int { items.count }
 }

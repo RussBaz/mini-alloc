@@ -1,6 +1,6 @@
 # Mini-Alloc
 
-A basic, thread-safe container to hold references to Swift objects.
+A basic, thread-safe, sparsed container to hold references to Swift objects.
 
 The intended use case is when you need to create an unknown number of objects and pass them by reference to some C code, and be sure that they will not be garbage collected before the C code finishes processing of those objects.
 
@@ -49,6 +49,7 @@ init(initialSize size: Int = 8) // size states how much space to reserved for re
 @discardableResult func retain(_ item: T) -> Int? // returns a retained object id
 
 @discardableResult func release(_ id: Int) -> Bool // returns true only if a retained object with the given id was released
+func release(_ ids: [Int])
 
 func find(by id: Int) -> T? // returns a retained object if it exists
 

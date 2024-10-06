@@ -38,21 +38,21 @@ extension TestObject: Equatable {
 
     allocator.update(with: id1) {
         $0.increment()
-        for _ in 0..<id1 * id1 {
+        for _ in 0 ..< id1 * id1 {
             $0.increment()
         }
     }
 
     allocator.update(with: id2) {
         $0.increment()
-        for _ in 0..<id2 * id2 {
+        for _ in 0 ..< id2 * id2 {
             $0.increment()
         }
     }
 
     allocator.update(with: id3) {
         $0.increment()
-        for _ in 0..<id3 * id3 {
+        for _ in 0 ..< id3 * id3 {
             $0.increment()
         }
     }
@@ -113,6 +113,7 @@ extension TestObject: Equatable {
 
     var timesPinged = 0
 
+    // swiftformat:disable:next preferForLoop
     allocator.forEach {
         timesPinged += $0.counter
     }
@@ -123,4 +124,42 @@ extension TestObject: Equatable {
 
     counters = allocator.map { $0 }
     #expect(counters.count == 0)
+}
+
+@Test func size() async throws {
+    let allocator = MAContainer<TestObject>(initialSize: -1)
+    #expect(allocator.size == 4)
+
+    let id1 = allocator.retain { .init(id: $0) }!
+    let id2 = allocator.retain { .init(id: $0) }!
+    let id3 = allocator.retain { .init(id: $0) }!
+    let id4 = allocator.retain { .init(id: $0) }!
+    let id5 = allocator.retain { .init(id: $0) }!
+
+    #expect(id1 == 0)
+    #expect(allocator.size == 5)
+
+    allocator.release(id2)
+    #expect(allocator.size == 5)
+
+    allocator.release([id3, id4, id5])
+    #expect(allocator.size == 5)
+
+    let id6 = allocator.retain { .init(id: $0) }!
+    #expect(allocator.size == 5)
+    #expect(id5 == id6)
+
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+
+    #expect(allocator.size == 6)
+
+    allocator.releaseAll(size: 2)
+    #expect(allocator.size == 4)
+    allocator.releaseAll(size: 16)
+    #expect(allocator.size == 16)
+    allocator.releaseAll() // Does not change the size of inner array
+    #expect(allocator.size == 16)
 }
