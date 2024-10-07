@@ -114,7 +114,7 @@ extension TestObject: Equatable {
     var timesPinged = 0
 
     // swiftformat:disable:next preferForLoop
-    allocator.forEach {
+    allocator.each {
         timesPinged += $0.counter
     }
 
@@ -162,4 +162,32 @@ extension TestObject: Equatable {
     #expect(allocator.size == 16)
     allocator.releaseAll() // Does not change the size of inner array
     #expect(allocator.size == 16)
+}
+
+@Test func pointerAfterResize() async throws {
+    let allocator = MAContainer<TestObject>()
+    #expect(allocator.size == 8)
+    let id1 = allocator.retain { .init(id: $0) }!
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    let pointer = allocator.pointer(to: id1)!
+
+    #expect(pointer.pointee.id == 0)
+
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+    allocator.retain { .init(id: $0) }
+
+    #expect(allocator.size == 12)
+    #expect(pointer.pointee.id == 0)
+
+    let item = allocator.find(by: id1)
+
+    #expect(item?.id == pointer.pointee.id)
 }

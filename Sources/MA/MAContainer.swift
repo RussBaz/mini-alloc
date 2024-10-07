@@ -2,7 +2,7 @@ import Foundation
 
 public final class MAContainer<T: AnyObject> {
     private var lock = NSLock()
-    private var items: [T?]
+    private var items: [UnsafeMutablePointer<T>?]
 
     private var next: [Int]
 
@@ -22,29 +22,35 @@ public final class MAContainer<T: AnyObject> {
 
         guard let item else { return nil }
 
+        let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1)
+        pointer.initialize(to: item)
+
         if let nextIndex {
-            items[nextIndex] = item
+            items[nextIndex] = pointer
             return nextIndex
         } else {
             let index = items.endIndex
-            items.append(item)
+            items.append(pointer)
             return index
         }
     }
 
     @discardableResult
-    public func retain(_ item: T) -> Int? {
+    public func retain(_ item: consuming T) -> Int? {
         lock.lock()
         defer { lock.unlock() }
 
         let nextIndex = next.popLast()
 
+        let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1)
+        pointer.initialize(to: item)
+
         if let nextIndex {
-            items[nextIndex] = item
+            items[nextIndex] = pointer
             return nextIndex
         } else {
             let index = items.endIndex
-            items.append(item)
+            items.append(pointer)
             return index
         }
     }
@@ -56,8 +62,10 @@ public final class MAContainer<T: AnyObject> {
 
         guard id < items.endIndex else { return false }
 
-        guard items[id] != nil else { return false }
+        guard let pointer = items[id] else { return false }
 
+        pointer.deinitialize(count: 1)
+        pointer.deallocate()
         items[id] = nil
         next.append(id)
 
@@ -69,7 +77,10 @@ public final class MAContainer<T: AnyObject> {
         defer { lock.unlock() }
 
         for id in ids {
-            guard items[id] != nil else { continue }
+            guard let pointer = items[id] else { continue }
+
+            pointer.deinitialize(count: 1)
+            pointer.deallocate()
             items[id] = nil
             next.append(id)
         }
@@ -79,7 +90,7 @@ public final class MAContainer<T: AnyObject> {
         lock.lock()
         defer { lock.unlock() }
 
-        return items[id]
+        return items[id]?.pointee
     }
 
     @discardableResult
@@ -89,26 +100,31 @@ public final class MAContainer<T: AnyObject> {
 
         guard items[id] != nil else { return nil }
 
-        return using(&items[id]!)
+        return using(&items[id]!.pointee)
     }
 
     public func map<U>(using: (T) -> U) -> [U] {
         lock.lock()
         defer { lock.unlock() }
 
-        return items.compactMap { item in
-            guard let item else { return nil }
-            return using(item)
+        return items.compactMap { pointer in
+            guard let pointer else { return nil }
+            return using(pointer.pointee)
         }
     }
 
-    public func forEach(using: (T) -> Void) {
+    @available(*, deprecated, renamed: "each", message: "Please use the new function name in order to avoid accidentally triggering default swiftformat 'preferForLoop' rule.")
+    public func forEach(using fn: (T) -> Void) {
+        each(using: fn)
+    }
+
+    public func each(using: (T) -> Void) {
         lock.lock()
         defer { lock.unlock() }
 
         for item in items {
             if let item {
-                using(item)
+                using(item.pointee)
             }
         }
     }
@@ -131,9 +147,7 @@ public final class MAContainer<T: AnyObject> {
         lock.lock()
         defer { lock.unlock() }
 
-        guard items[id] != nil else { return nil }
-
-        return withUnsafeMutablePointer(to: &items[id]!) { $0 }
+        return items[id]
     }
 
     public var size: Int { items.count }

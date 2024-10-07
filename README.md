@@ -69,7 +69,7 @@ SPM installation:
 - Add the package to your package dependencies
 
 ```swift
-.package(url: "https://github.com/RussBaz/mini-alloc", from: "1.0.0"),
+.package(url: "https://github.com/RussBaz/mini-alloc", from: "1.0.2"),
 ```
 
 - Then add it to your target dependencies
