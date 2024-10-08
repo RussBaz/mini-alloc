@@ -57,7 +57,8 @@ func find(by id: Int) -> T? // returns a retained object if it exists
 
 // do something with every retained object in the container
 func map<U>(using: (T) -> U) -> [U]
-func forEach(using: (T) -> Void)
+func each(using: (T) -> Void)
+func filter(_ predicate: (T) -> Bool) -> [T]
 
 func releaseAll(size: Int? = nil) // if the size is provided, it will resize the internal storage to the specified size. Otherwise, it will leave it as it is.
 

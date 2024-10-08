@@ -143,6 +143,13 @@ public final class MAContainer<T: AnyObject> {
         next = Array(items.indices.reversed())
     }
 
+    public func filter(_ predicate: (T) -> Bool) -> [T] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        return items.compactMap { $0?.pointee }.filter { predicate($0) }.map { $0 }
+    }
+
     public func pointer(to id: Int) -> UnsafeMutablePointer<T>? {
         lock.lock()
         defer { lock.unlock() }
